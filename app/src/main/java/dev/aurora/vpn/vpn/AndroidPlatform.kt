@@ -10,6 +10,7 @@ import android.os.Build
 import android.os.Process
 import android.system.OsConstants
 import io.nekohasekai.libbox.*
+import dev.aurora.vpn.data.SplitTunnelStore
 import java.net.Inet6Address
 import java.net.InetSocketAddress
 import java.net.InterfaceAddress
@@ -79,6 +80,9 @@ class AndroidPlatform(
             }
             if (!hasDns) builder.addDnsServer("1.1.1.1")
         }
+        // Configure exclusive per-app lists before establishment: Android forbids combining allow + deny.
+        SplitTunnelStore(vpn).applyTo(builder)
+
         // libbox owns the FD while we retain a ParcelFileDescriptor to close on teardown.
         val pfd = builder.establish() ?: error("Android refused TUN establishment")
         keepTun(pfd)
