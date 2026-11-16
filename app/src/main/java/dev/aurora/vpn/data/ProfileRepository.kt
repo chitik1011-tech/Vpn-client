@@ -4,6 +4,7 @@ import android.content.Context
 import dev.aurora.vpn.core.ServerProfile
 import dev.aurora.vpn.core.VlessParser
 import dev.aurora.vpn.subscriptions.SubscriptionImporter
+import dev.aurora.vpn.subscriptions.HappAdd
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -20,6 +21,7 @@ class ProfileRepository(context: Context) {
         val imported = when {
             trimmed.startsWith("vless://", true) -> listOf(VlessParser.profile(trimmed))
             trimmed.startsWith("https://", true) -> importer.download(trimmed)
+            trimmed.startsWith("happ://add/", true) -> importer.download(HappAdd.resolve(trimmed))
             trimmed.startsWith("happ://", true) -> error(
                 "Encrypted/opaque Happ links require a provider-supported import API; use an authorized HTTPS URL"
             )

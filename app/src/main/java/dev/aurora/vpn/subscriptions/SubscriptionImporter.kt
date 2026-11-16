@@ -17,6 +17,9 @@ class SubscriptionImporter {
     fun parseContent(raw: String, source: String = ""): List<ServerProfile> {
         require(raw.length <= MAX_BYTES) { "Subscription is too large" }
         val sourceText = raw.trim()
+        if (sourceText.startsWith("{") || sourceText.startsWith("[")) {
+            return SingBoxJsonImport.parse(sourceText, source)
+        }
         val decoded = if (sourceText.startsWith("vless://") || sourceText.contains('\n')) {
             sourceText
         } else {
