@@ -37,12 +37,16 @@ gradle --no-daemon :app:testDebugUnitTest :app:lintDebug :app:assembleDebug
 
 Переход в состояние CONNECTED означает лишь успешный старт движка и получение дескриптора TUN, а не подтверждённую доставку данных на удалённый сервер.
 
+## Подпись релиза
+
+Для release workflow задайте GitHub Secrets: `SIGNING_KEYSTORE_BASE64`, `SIGNING_STORE_PASSWORD`, `SIGNING_KEY_ALIAS`, `SIGNING_KEY_PASSWORD`. Приватный keystore не коммитьте. Триггер — тег `v*` или ручной запуск Signed Android Release. APK проверяется через `apksigner verify`.
+
 ## Ограничения
 
 - Xray-core и автоматический выбор движка не реализованы.
 - VMess, Trojan, Shadowsocks, HY2, TUIC, WireGuard, OpenVPN, AmneziaWG не реализованы.
 - `happ://crypt/`, `crypt2`, `crypt3`, `crypt4`, `crypt5` не поддержаны без доступных легальных ключей и API.
-- QR-сканер, правила, настоящий ping/traffic counters, подписки с токенами/авторизацией, резервные сценарии и release signing не готовы.
+- QR-сканер, сложные правила, настоящий ping/traffic counters, подписки с токенами/авторизацией и резервные сценарии не готовы. Подпись release реализована, но ещё не проверена в Actions.
 
 Полная матрица — [docs/ENGINE_STATUS.md](docs/ENGINE_STATUS.md).
 Лицензия — [LICENSE](LICENSE), упоминания авторов зависимостей — [NOTICE](NOTICE).

@@ -18,6 +18,32 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    // Signing keys and passwords are only supplied by GitHub Secrets / environment.
+    // Debug builds and local unsigned release builds need no signing secrets.
+    val keyStorePath = System.getenv("VPN_RELEASE_KEYSTORE")
+    val keyStorePassword = System.getenv("VPN_RELEASE_STORE_PASSWORD")
+    val keyAliasName = System.getenv("VPN_RELEASE_KEY_ALIAS")
+    val keyAliasPassword = System.getenv("VPN_RELEASE_KEY_PASSWORD")
+    if (!keyStorePath.isNullOrBlank() &&
+        !keyStorePassword.isNullOrBlank() &&
+        !keyAliasName.isNullOrBlank() &&
+        !keyAliasPassword.isNullOrBlank()) {
+        signingConfigs {
+            create("secureRelease") {
+                storeFile = file(keyStorePath)
+                storePassword = keyStorePassword
+                keyAlias = keyAliasName
+                keyPassword = keyAliasPassword
+            }
+        }
+        buildTypes {
+            getByName("release") {
+                signingConfig = signingConfigs.getByName("secureRelease")
+                isMinifyEnabled = false
+            }
+        }
+    }
+
     buildFeatures { compose = true; buildConfig = true }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
