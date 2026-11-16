@@ -1,0 +1,9 @@
+Aurora VPN is an independent GPL-3.0-or-later Android client.
+
+The project uses libbox built from SagerNet/sing-box (GPL-3.0 or later), see:
+https://github.com/SagerNet/sing-box
+https://github.com/SagerNet/sing-box-for-android
+https://github.com/singbox-android/libbox
+
+Copyright for upstream components is retained by their respective authors.
+Aurora VPN is not associated with Happ, Google, or SagerNet.
