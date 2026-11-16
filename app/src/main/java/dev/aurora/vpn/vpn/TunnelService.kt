@@ -8,6 +8,7 @@ import android.net.VpnService
 import android.os.Build
 import android.os.ParcelFileDescriptor
 import androidx.core.app.NotificationCompat
+import dev.aurora.vpn.BuildConfig
 import dev.aurora.vpn.MainActivity
 import dev.aurora.vpn.R
 import dev.aurora.vpn.core.SingBoxConfig

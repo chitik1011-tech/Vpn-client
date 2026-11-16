@@ -1,6 +1,6 @@
 package dev.aurora.vpn.subscriptions
 
-import android.util.Base64
+import java.util.Base64
 import dev.aurora.vpn.core.ServerProfile
 import dev.aurora.vpn.core.VlessParser
 import okhttp3.OkHttpClient
@@ -22,7 +22,7 @@ class SubscriptionImporter {
         } else {
             runCatching {
                 val fixed = sourceText.replace("\n", "").replace("\r", "")
-                String(Base64.decode(fixed, Base64.DEFAULT), Charsets.UTF_8)
+                String(Base64.getMimeDecoder().decode(fixed), Charsets.UTF_8)
             }.getOrDefault(sourceText)
         }
         val lines = decoded.lineSequence().map { it.trim() }

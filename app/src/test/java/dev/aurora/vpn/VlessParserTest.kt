@@ -44,7 +44,7 @@ class VlessParserTest {
 
     @Test(expected = IllegalArgumentException::class)
     fun insecureTlsRejected() {
-        VlessParser.parse(valid + "&allowInsecure=true")
+        VlessParser.parse(valid.replace("&fp=chrome", "&allowInsecure=true&fp=chrome"))
     }
 
     @Test(expected = IllegalArgumentException::class)
