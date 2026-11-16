@@ -20,7 +20,7 @@ class SubscriptionImporter {
         if (sourceText.startsWith("{") || sourceText.startsWith("[")) {
             return SingBoxJsonImport.parse(sourceText, source)
         }
-        val decoded = if (sourceText.startsWith("vless://") || sourceText.contains('\n')) {
+        val decoded = if (sourceText.lineSequence().any { it.trimStart().startsWith("vless://", true) }) {
             sourceText
         } else {
             runCatching {

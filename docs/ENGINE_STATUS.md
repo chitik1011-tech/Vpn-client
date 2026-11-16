@@ -11,6 +11,8 @@ Do not treat compilation as network verification.
 | Xray-core | Not implemented |
 | VMess / Trojan / Shadowsocks / HY2 / TUIC | Not implemented |
 | Happ standard HTTPS subscription with VLESS links | Implemented, device validation pending |
+| happ://add/ plaintext or base64 HTTPS wrapper | Implemented, tests added |
+| sing-box JSON VLESS outbound import | Implemented, tests added |
 | happ://crypt through crypt5 | Not implemented: private encrypted links require provider-supported authorization |
 | Always-on and block-without-VPN | Provided by Android OS settings; device validation pending |
 
