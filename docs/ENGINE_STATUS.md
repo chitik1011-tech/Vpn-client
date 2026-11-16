@@ -21,3 +21,5 @@ A successful APK build is not proof of tunneling. Verify on real Android:
 4. Test cellular/Wi-Fi switches, revoke and disconnect.
 5. Capture packet traces on controlled server; check no DNS/IPv6 leak.
 No tests requiring a real remote server have been performed in this environment.
+
+DNS note: standard DNS is configured over the selected proxy (sing-box DoH detour). A distinct TLS-protected direct bootstrap lookup may be required to resolve the proxy host itself; until packet captures confirm, the project does not claim zero DNS leaks.

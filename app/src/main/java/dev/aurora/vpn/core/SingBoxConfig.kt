@@ -7,6 +7,7 @@ object SingBoxConfig {
     fun build(profile: ServerProfile): String {
         val s = VlessParser.parse(profile.uri)
         val outbound = JSONObject()
+            .put("domain_resolver", "bootstrap")
             .put("type", "vless")
             .put("tag", "proxy")
             .put("server", s.server)
@@ -39,9 +40,12 @@ object SingBoxConfig {
         val tun = JSONObject().put("type", "tun").put("tag", "tun-in")
             .put("address", JSONArray().put("172.19.0.1/30").put("fdfe:dcba:9876::1/126"))
             .put("mtu", 1500).put("auto_route", true).put("stack", "mixed")
+            .put("dns_mode", "hijack")
         val dns = JSONObject().put("servers",
             JSONArray().put(JSONObject().put("type", "https").put("tag", "remote")
-                .put("server", "1.1.1.1").put("server_port", 443)))
+                .put("server", "1.1.1.1").put("server_port", 443).put("detour", "proxy"))
+                .put(JSONObject().put("type", "https").put("tag", "bootstrap")
+                .put("server", "9.9.9.9").put("server_port", 443).put("detour", "direct")))
             .put("final", "remote")
         return JSONObject()
             .put("log", JSONObject().put("level", "warn"))
