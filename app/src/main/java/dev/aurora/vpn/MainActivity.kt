@@ -33,6 +33,7 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -41,6 +42,8 @@ import androidx.core.view.WindowCompat
 import androidx.lifecycle.lifecycleScope
 import dev.aurora.vpn.core.ServerProfile
 import dev.aurora.vpn.data.ProfileRepository
+import dev.aurora.vpn.data.SplitMode
+import dev.aurora.vpn.data.SplitTunnelStore
 import dev.aurora.vpn.vpn.TunnelService
 import dev.aurora.vpn.vpn.TunnelState
 import dev.aurora.vpn.vpn.VpnStatus
@@ -97,6 +100,8 @@ class MainActivity : ComponentActivity() {
                                 icon = { Icon(Icons.Rounded.Security, null) }, label = { Text("Home") })
                             NavigationBarItem(tab == 1, { tab = 1 },
                                 icon = { Icon(Icons.Rounded.Cloud, null) }, label = { Text("Servers") })
+                            NavigationBarItem(tab == 2, { tab = 2 },
+                                icon = { Icon(Icons.Rounded.Settings, null) }, label = { Text("Settings") })
                         }
                     }
                 ) { padding ->
@@ -111,7 +116,7 @@ class MainActivity : ComponentActivity() {
                                 },
                                 onSelectServer = { tab = 1 }
                             )
-                        } else {
+                        } else if (tab == 1) {
                             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                                 Text("Servers", style = MaterialTheme.typography.headlineMedium, modifier = Modifier.weight(1f))
                                 IconButton(onClick = { importText = ""; inputOpen = true }) {
@@ -162,6 +167,8 @@ class MainActivity : ComponentActivity() {
                                     modifier = Modifier.padding(16.dp),
                                     color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
+                        } else {
+                            SplitTunnelingPanel()
                         }
                         if (uiError.isNotBlank()) {
                             Spacer(Modifier.height(12.dp))
@@ -315,5 +322,82 @@ private fun HomePage(
         Text("Actual traffic routing requires Android VPN permission and a valid server.",
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             style = MaterialTheme.typography.labelSmall)
+    }
+}
+
+
+@Composable
+private fun SplitTunnelingPanel() {
+    val context = LocalContext.current
+    val store = remember(context) { SplitTunnelStore(context) }
+    var mode by remember { mutableStateOf(store.mode()) }
+    var selected by remember { mutableStateOf(store.selectedPackages()) }
+    val apps = remember(context) { store.launchableApps(context) }
+
+    Column(Modifier.fillMaxSize()) {
+        Text("Split tunneling", style = MaterialTheme.typography.headlineMedium)
+        Spacer(Modifier.height(8.dp))
+        Text(
+            "Choose which apps use the VPN. Changes apply on the next connection.",
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MaterialTheme.typography.bodyMedium
+        )
+        Spacer(Modifier.height(20.dp))
+        listOf(
+            SplitMode.OFF to "All apps",
+            SplitMode.INCLUDE to "Only selected",
+            SplitMode.EXCLUDE to "Exclude selected"
+        ).forEach { (value, label) ->
+            Row(
+                Modifier.fillMaxWidth().clickable {
+                    mode = value
+                    store.setMode(value)
+                }.padding(vertical = 5.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                RadioButton(
+                    selected = mode == value,
+                    onClick = {
+                        mode = value
+                        store.setMode(value)
+                    }
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(label, style = MaterialTheme.typography.bodyLarge)
+            }
+        }
+        Spacer(Modifier.height(12.dp))
+        Text("Installed launchable apps", style = MaterialTheme.typography.titleMedium)
+        if (mode == SplitMode.OFF) {
+            Text("Every app uses the tunnel. Select a mode above to customize.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+        } else {
+            Text(selected.size.toString() + " selected",
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+            LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                items(apps, key = { it.first }) { (packageName, appName) ->
+                    val checked = packageName in selected
+                    Row(
+                        Modifier.fillMaxWidth().clickable {
+                            selected = if (checked) selected - packageName else selected + packageName
+                            store.setSelectedPackages(selected)
+                        }.padding(vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(Modifier.weight(1f)) {
+                            Text(appName, style = MaterialTheme.typography.bodyMedium)
+                            Text(packageName,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        Checkbox(checked, onCheckedChange = {
+                            selected = if (it) selected + packageName else selected - packageName
+                            store.setSelectedPackages(selected)
+                        })
+                    }
+                }
+            }
+        }
     }
 }
