@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">Aurora VPN</string>
+    <string name="vpn_channel">VPN connection</string>
+</resources>
