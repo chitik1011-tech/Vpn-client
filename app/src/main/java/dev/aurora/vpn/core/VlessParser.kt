@@ -38,6 +38,7 @@ object VlessParser {
             val parts = it.split('=', limit = 2)
             decode(parts[0]) to decode(parts.getOrElse(1) { "" })
         }
+        require((params["encryption"] ?: "none") == "none") { "VLESS encryption must be none" }
         val security = params["security"] ?: "none"
         require(security in setOf("reality", "tls", "none")) { "Unsupported security: $security" }
         val transport = params["type"] ?: "tcp"

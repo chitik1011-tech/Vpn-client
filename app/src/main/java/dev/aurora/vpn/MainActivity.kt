@@ -216,7 +216,15 @@ class MainActivity : ComponentActivity() {
                 repository.addLink(link)
                 error.value = ""
             } catch (t: Exception) {
-                error.value = t.message?.take(160) ?: "Import failed"
+                // Never echo malformed private links, URLs or network exceptions into the UI.
+                error.value = when (t) {
+                    is IllegalArgumentException -> when {
+                        t.message?.contains("http", ignoreCase = true) == true -> "Invalid subscription or server address"
+                        t.message?.contains("vless://", ignoreCase = true) == true -> "Invalid VLESS link"
+                        else -> t.message?.take(110) ?: "Invalid profile"
+                    }
+                    else -> "Import failed. Check the URL, format or network connection."
+                }
             }
         }
     }

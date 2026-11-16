@@ -12,7 +12,7 @@ import java.util.concurrent.TimeUnit
 class SubscriptionImporter {
     companion object { private const val MAX_BYTES = 2 * 1024 * 1024 }
     private val client = OkHttpClient.Builder().connectTimeout(12, TimeUnit.SECONDS)
-        .readTimeout(20, TimeUnit.SECONDS).followRedirects(true).build()
+        .readTimeout(20, TimeUnit.SECONDS).followRedirects(true).followSslRedirects(false).build()
 
     fun parseContent(raw: String, source: String = ""): List<ServerProfile> {
         require(raw.length <= MAX_BYTES) { "Subscription is too large" }

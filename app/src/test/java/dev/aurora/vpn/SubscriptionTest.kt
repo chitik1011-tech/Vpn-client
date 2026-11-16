@@ -50,7 +50,7 @@ class SubscriptionTest {
         assertTrue(results[0].uri.contains("security=reality"))
     }
 
-    @Test(expected = IllegalArgumentException::class)
+    @Test(expected = org.json.JSONException::class)
     fun invalidJsonRejected() {
         SingBoxJsonImport.parse("""{"outbounds":[{"type":"vless","server":"bad"}]}""")
     }
