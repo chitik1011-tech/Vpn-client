@@ -46,6 +46,7 @@ class TunnelService : VpnService(), CommandServerHandler {
         const val EXTRA_PROFILE_ID = "profile_id"
         private const val CHANNEL = "vpn"
         private const val NOTIFICATION = 42
+        @Volatile private var libboxReady = false
     }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -67,21 +68,33 @@ class TunnelService : VpnService(), CommandServerHandler {
                 return START_NOT_STICKY
             }
             ACTION_START -> {
-                if (startJob?.isActive == true || server != null) return START_NOT_STICKY
-                startForeground(NOTIFICATION, notification("Starting VPN"))
                 val id = intent.getStringExtra(EXTRA_PROFILE_ID)
-                startJob = scope.launch { startTunnel(id) }
+                if (!id.isNullOrBlank()) {
+                    getSharedPreferences("selection", MODE_PRIVATE).edit()
+                        .putString("selected", id).apply()
+                }
+                startSelected(id)
             }
             else -> {
-                // Android Always-on may start this service without an explicit profile.
-                if (server == null) {
-                    startForeground(NOTIFICATION, notification("VPN requires a selected server"))
-                    TunnelState.set(VpnStatus.ERROR, "Select a server in Aurora VPN")
+                // The system launches an Always-on VPN service after reboot or process death.
+                val id = getSharedPreferences("selection", MODE_PRIVATE)
+                    .getString("selected", null)
+                if (!id.isNullOrBlank()) {
+                    startSelected(id)
+                } else if (server == null && startJob?.isActive != true) {
+                    startForeground(NOTIFICATION, notification("Select a VPN server to connect"))
+                    TunnelState.set(VpnStatus.ERROR, "Choose a server before enabling Always-on VPN")
                     stopSelf()
                 }
             }
         }
-        return START_NOT_STICKY
+        return START_STICKY
+    }
+
+    private fun startSelected(profileId: String?) {
+        if (server != null || startJob?.isActive == true) return
+        startForeground(NOTIFICATION, notification("Starting VPN"))
+        startJob = scope.launch { startTunnel(profileId) }
     }
 
     private suspend fun startTunnel(profileId: String?) {
@@ -97,7 +110,12 @@ class TunnelService : VpnService(), CommandServerHandler {
                 tempPath = cacheDir.absolutePath
                 debug = BuildConfig.DEBUG
             }
-            Libbox.setup(options)
+            synchronized(Companion) {
+                if (!libboxReady) {
+                    Libbox.setup(options)
+                    libboxReady = true
+                }
+            }
             val platform = AndroidPlatform(this) { newTun ->
                 tun?.close()
                 tun = newTun
