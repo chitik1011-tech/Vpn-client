@@ -44,7 +44,7 @@ class SecretStore(private val context: Context) {
             val item = array.getJSONObject(i)
             ServerProfile(
                 item.getString("id"), item.getString("name"),
-                item.getString("uri"), "VLESS", item.optString("subscription", "")
+                item.getString("uri"), item.optString("protocol", "VLESS"), item.optString("subscription", "")
             )
         }
     }
@@ -55,7 +55,7 @@ class SecretStore(private val context: Context) {
         val items = JSONArray()
         profiles.forEach {
             items.put(JSONObject().put("id", it.id).put("name", it.name)
-                .put("uri", it.uri).put("subscription", it.subscription))
+                .put("uri", it.uri).put("protocol", it.protocol).put("subscription", it.subscription))
         }
         val cipher = Cipher.getInstance("AES/GCM/NoPadding")
         cipher.init(Cipher.ENCRYPT_MODE, key())

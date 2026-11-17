@@ -12,8 +12,8 @@ android {
         applicationId = "dev.aurora.vpn"
         minSdk = 26
         targetSdk = 36
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = 2
+        versionName = "0.2.0-alpha"
         ndk { abiFilters += "arm64-v8a" }
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -71,6 +71,8 @@ dependencies {
     implementation("androidx.datastore:datastore-preferences:1.1.7")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("org.yaml:snakeyaml:2.4")
+    implementation("com.google.mlkit:barcode-scanning:17.3.0")
     // Android native sing-box implementation, including ARM64 binaries.
     implementation("com.github.singbox-android:libbox:1.14.0")
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
