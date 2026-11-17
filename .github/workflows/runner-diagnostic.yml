@@ -1,0 +1,20 @@
+name: Runner diagnostic
+on:
+  push:
+    branches: ["agent/**"]
+  workflow_dispatch:
+jobs:
+  test-runner:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - name: Verify hosted runner is actually available
+        run: |
+          echo "RUNNER=${RUNNER_NAME}"
+          uname -a
+          java -version
+      - uses: actions/upload-artifact@v4
+        with:
+          name: runner-diagnostic
+          path: .github/workflows/runner-diagnostic.yml
