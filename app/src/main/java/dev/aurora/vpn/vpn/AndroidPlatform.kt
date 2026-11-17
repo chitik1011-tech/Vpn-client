@@ -94,8 +94,7 @@ class AndroidPlatform(
         destinationAddress: String, destinationPort: Int
     ): ConnectionOwner {
         if (Build.VERSION.SDK_INT < 29) {
-            return Libbox.findConnectionOwner(ipProtocol, sourceAddress, sourcePort,
-                destinationAddress, destinationPort)
+            error("Connection ownership lookup requires Android 10 or newer")
         }
         val uid = connectivity.getConnectionOwnerUid(
             ipProtocol, InetSocketAddress(sourceAddress, sourcePort),
@@ -148,7 +147,6 @@ class AndroidPlatform(
             entry.mtu = javaInterface.mtu
             entry.addresses = StringArray(javaInterface.interfaceAddresses.map { it.prefixString() }.iterator())
             entry.dnsServer = StringArray(link.dnsServers.mapNotNull { it.hostAddress }.iterator())
-            entry.dnsSearchDomain = StringArray(link.domains?.split(' ')?.iterator() ?: emptyList<String>().iterator())
             entry.gateway = StringArray(link.routes.filter { it.destination.prefixLength == 0 }
                 .mapNotNull { it.gateway?.hostAddress }.iterator())
             entry.type = when {
@@ -202,6 +200,4 @@ class AndroidPlatform(
     override fun usePlatformBridge() = false
     override fun createBridge(options: BridgeOptions?): BridgeSession = error("Bridge requires root")
     override fun usePlatformAutoRedirect() = false
-    override fun createAutoRedirect(options: ByteArray?, handler: AutoRedirectHandler?): AutoRedirectSession =
-        error("AutoRedirect requires root")
 }
