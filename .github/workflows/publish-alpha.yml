@@ -1,0 +1,47 @@
+name: Publish experimental APK
+on:
+  workflow_run:
+    workflows: ["Android CI"]
+    types: [completed]
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  publish:
+    if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main' && github.event.workflow_run.event == 'push' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Download verified CI APK
+        uses: actions/download-artifact@v4
+        with:
+          name: aurora-vpn-debug
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Publish as pre-release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          CI_SHA: ${{ github.event.workflow_run.head_sha }}
+          CI_RUN_NUMBER: ${{ github.event.workflow_run.run_number }}
+          CI_RUN_ID: ${{ github.event.workflow_run.id }}
+        run: |
+          set -euo pipefail
+          test -s app-debug.apk
+          mv app-debug.apk AuroraVPN-arm64-v0.1.0-alpha.apk
+          TAG="v0.1.0-alpha.${CI_RUN_NUMBER}"
+          {
+            echo "Experimental debug APK for Android ARM64. Not a production-ready VPN."
+            echo ""
+            echo "Built from commit \`${CI_SHA}\` in CI run ${CI_RUN_ID}."
+            echo "Debug-signed, not yet tested on a physical device."
+            echo "Check server routing and DNS carefully before using with sensitive traffic."
+          } > release-notes.md
+          sha256sum AuroraVPN-arm64-v0.1.0-alpha.apk
+          gh release create "$TAG" AuroraVPN-arm64-v0.1.0-alpha.apk \
+            --target "$CI_SHA" \
+            --title "AuroraVPN $TAG (experimental)" \
+            --notes-file release-notes.md \
+            --prerelease
