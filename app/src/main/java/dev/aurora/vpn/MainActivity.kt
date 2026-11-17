@@ -10,6 +10,14 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
@@ -20,6 +28,12 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.QrCodeScanner
+import androidx.compose.material.icons.rounded.AutoAwesome
+import com.google.mlkit.vision.barcode.BarcodeScanning
+import com.google.mlkit.vision.barcode.BarcodeScannerOptions
+import com.google.mlkit.vision.barcode.common.Barcode
+import com.google.mlkit.vision.common.InputImage
 import androidx.compose.material.icons.rounded.Cloud
 import androidx.compose.material.icons.rounded.ContentPaste
 import androidx.compose.material.icons.rounded.PowerSettingsNew
@@ -55,6 +69,34 @@ class MainActivity : ComponentActivity() {
     private val selectedPrefs by lazy { getSharedPreferences("selection", MODE_PRIVATE) }
     private val error = MutableStateFlow("")
     private var pendingConnect: String? = null
+
+    // Uses Android's document picker; no camera or photo-library permission required.
+    // Bundled ML Kit processes the QR image locally without uploading it.
+    private val qrPhotoPicker = registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        if (uri != null) {
+            val image = runCatching { InputImage.fromFilePath(this, uri) }.getOrNull()
+            if (image == null) {
+                error.value = "Could not open the selected photo"
+            } else {
+                val options = BarcodeScannerOptions.Builder()
+                    .setBarcodeFormats(Barcode.FORMAT_QR_CODE).build()
+                val scanner = BarcodeScanning.getClient(options)
+                scanner.process(image)
+                    .addOnSuccessListener { codes ->
+                        val link = codes.mapNotNull { it.rawValue }
+                            .firstOrNull { value ->
+                                value.startsWith("https://", true) ||
+                                    value.startsWith("happ://", true) ||
+                                    dev.aurora.vpn.subscriptions.ProxyLinkParser.isShareLink(value)
+                            }
+                        if (link == null) error.value = "No supported VPN QR code found in this photo"
+                        else importLink(link)
+                    }
+                    .addOnFailureListener { error.value = "Unable to read QR code from photo" }
+                    .addOnCompleteListener { scanner.close() }
+            }
+        }
+    }
     private val permission = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
         val id = pendingConnect
         pendingConnect = null
@@ -88,14 +130,28 @@ class MainActivity : ComponentActivity() {
                 Scaffold(
                     modifier = Modifier.fillMaxSize(),
                     topBar = {
-                        Column(Modifier.statusBarsPadding().padding(horizontal = 24.dp, vertical = 16.dp)) {
-                            Text("Aurora", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.SemiBold)
-                            Text("Private connection", style = MaterialTheme.typography.labelLarge,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Row(
+                            Modifier.fillMaxWidth().statusBarsPadding()
+                                .padding(horizontal = 24.dp, vertical = 18.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Surface(shape = RoundedCornerShape(20.dp),
+                                color = MaterialTheme.colorScheme.primaryContainer) {
+                                Icon(Icons.Rounded.AutoAwesome, contentDescription = null,
+                                    modifier = Modifier.padding(14.dp).size(28.dp),
+                                    tint = MaterialTheme.colorScheme.onPrimaryContainer)
+                            }
+                            Spacer(Modifier.width(14.dp))
+                            Column {
+                                Text("Aurora VPN", style = MaterialTheme.typography.headlineMedium,
+                                    fontWeight = FontWeight.Bold)
+                                Text("A calmer way to connect", style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
                         }
                     },
                     bottomBar = {
-                        NavigationBar(Modifier.navigationBarsPadding()) {
+                        NavigationBar(Modifier.navigationBarsPadding(), containerColor = MaterialTheme.colorScheme.surfaceContainerLow, tonalElevation = 0.dp) {
                             NavigationBarItem(tab == 0, { tab = 0 },
                                 icon = { Icon(Icons.Rounded.Security, null) }, label = { Text("Home") })
                             NavigationBarItem(tab == 1, { tab = 1 },
@@ -106,7 +162,8 @@ class MainActivity : ComponentActivity() {
                     }
                 ) { padding ->
                     Column(Modifier.fillMaxSize().padding(padding).padding(horizontal = 20.dp)) {
-                        if (tab == 0) {
+                        Crossfade(targetState = tab, animationSpec = tween(240), label = "Pixel pages") { currentTab ->
+                        if (currentTab == 0) {
                             HomePage(
                                 status, message, selected,
                                 onToggle = {
@@ -116,9 +173,12 @@ class MainActivity : ComponentActivity() {
                                 },
                                 onSelectServer = { tab = 1 }
                             )
-                        } else if (tab == 1) {
+                        } else if (currentTab == 1) {
                             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                                 Text("Servers", style = MaterialTheme.typography.headlineMedium, modifier = Modifier.weight(1f))
+                                IconButton(onClick = { qrPhotoPicker.launch("image/*") }) {
+                                    Icon(Icons.Rounded.QrCodeScanner, "Import QR code from photo")
+                                }
                                 IconButton(onClick = { importText = ""; inputOpen = true }) {
                                     Icon(Icons.Rounded.Add, "Add server or subscription")
                                 }
@@ -170,6 +230,7 @@ class MainActivity : ComponentActivity() {
                         } else {
                             SplitTunnelingPanel()
                         }
+                        }
                         if (uiError.isNotBlank()) {
                             Spacer(Modifier.height(12.dp))
                             Text(uiError, style = MaterialTheme.typography.bodySmall,
@@ -183,7 +244,15 @@ class MainActivity : ComponentActivity() {
                             title = { Text("Import a server") },
                             text = {
                                 Column {
-                                    Text("Paste a VLESS link or HTTPS subscription URL.")
+                                    Text("Paste a VPN link or HTTPS subscription, or import a QR code from a saved picture.")
+                                    TextButton(onClick = {
+                                        inputOpen = false
+                                        qrPhotoPicker.launch("image/*")
+                                    }) {
+                                        Icon(Icons.Rounded.QrCodeScanner, null)
+                                        Spacer(Modifier.width(8.dp))
+                                        Text("Choose QR image")
+                                    }
                                     Spacer(Modifier.height(12.dp))
                                     OutlinedTextField(importText, { importText = it }, minLines = 2,
                                         maxLines = 5, label = { Text("Link") })
@@ -263,32 +332,50 @@ private fun HomePage(
 ) {
     val haptic = LocalHapticFeedback.current
     val active = status == VpnStatus.CONNECTED
-    val scale by animateFloatAsState(if (status == VpnStatus.CONNECTING) 0.94f else 1f, label = "Power size")
+    val scale by animateFloatAsState(
+        if (status == VpnStatus.CONNECTING) 0.94f else 1f, label = "Power size")
+    val pulse by rememberInfiniteTransition(label = "Connecting pulse").animateFloat(
+        initialValue = 1f, targetValue = 1.045f,
+        animationSpec = infiniteRepeatable(tween(1100), RepeatMode.Reverse),
+        label = "Pulse"
+    )
+    val powerColor by animateColorAsState(
+        if (active) MaterialTheme.colorScheme.primaryContainer
+        else MaterialTheme.colorScheme.surfaceContainerHigh, label = "Connection color")
     Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.SpaceEvenly) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            AnimatedContent(targetState = status, label = "VPN state") { state ->
             Text(
-                when (status) {
+                when (state) {
                     VpnStatus.CONNECTED -> "Tunnel is running"
                     VpnStatus.CONNECTING -> "Starting tunnel"
                     VpnStatus.STOPPING -> "Disconnecting"
                     VpnStatus.ERROR -> "Connection error"
                     VpnStatus.DISCONNECTED -> "Not connected"
                 },
-                style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Medium
+                style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold
             )
+            }
+            Spacer(Modifier.height(10.dp))
+            Surface(shape = RoundedCornerShape(50.dp),
+                color = if (active) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerLow) {
+                Text(if (active) "● Protected" else "○ Ready when you are",
+                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 9.dp),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = if (active) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant)
+            }
             Spacer(Modifier.height(10.dp))
             Text(if (active) detail else "Your connection is not protected by this VPN",
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         Surface(
-            modifier = Modifier.size(232.dp).scale(scale).clickable {
+            modifier = Modifier.size(220.dp).scale(scale * if (status == VpnStatus.CONNECTING) pulse else 1f).clickable {
                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                 onToggle()
             },
             shape = CircleShape,
-            color = if (active) MaterialTheme.colorScheme.primaryContainer
-                    else MaterialTheme.colorScheme.surfaceContainerHigh,
+            color = powerColor,
             border = BorderStroke(2.dp, MaterialTheme.colorScheme.outlineVariant),
             tonalElevation = 8.dp
         ) {
@@ -301,7 +388,7 @@ private fun HomePage(
             }
         }
         ElevatedCard(
-            Modifier.fillMaxWidth().clickable(onClick = onSelectServer),
+            Modifier.fillMaxWidth().animateContentSize().clickable(onClick = onSelectServer),
             shape = RoundedCornerShape(28.dp)
         ) {
             Row(Modifier.padding(22.dp), verticalAlignment = Alignment.CenterVertically) {
