@@ -96,12 +96,12 @@ object ProxyLinkParser {
                 "path" to v.optString("path", ""),
                 "host" to v.optString("host", "")
             )
-            val tls = v.optString("tls", "").lowercase()
-            if (tls == "tls") {
+            val tlsMode = v.optString("tls", "").lowercase()
+            if (tlsMode == "tls") {
                 p["security"] = "tls"
                 p["sni"] = v.optString("sni", "")
                 p["fp"] = v.optString("fp", "")
-            } else require(tls.isBlank() || tls == "none") { "Unsupported VMess TLS" }
+            } else require(tlsMode.isBlank() || tlsMode == "none") { "Unsupported VMess TLS" }
             transport(p)?.let { outbound.put("transport", it) }
             tls(p, server, false)?.let { outbound.put("tls", it) }
             return fromOutbound(v.optString("ps", server), outbound, source)
