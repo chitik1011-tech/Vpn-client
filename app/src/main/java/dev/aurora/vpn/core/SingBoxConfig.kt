@@ -1,12 +1,16 @@
 package dev.aurora.vpn.core
 
+import dev.aurora.vpn.subscriptions.ProxyLinkParser
 import org.json.JSONArray
 import org.json.JSONObject
 
 object SingBoxConfig {
     fun build(profile: ServerProfile): String {
-        val s = VlessParser.parse(profile.uri)
-        val outbound = JSONObject()
+        val outbound = if (profile.uri.startsWith("sb-outbound:")) {
+            ProxyLinkParser.decodeOutbound(profile.uri)
+        } else {
+            val s = VlessParser.parse(profile.uri)
+            JSONObject()
             .put("domain_resolver", "bootstrap")
             .put("type", "vless")
             .put("tag", "proxy")
@@ -34,6 +38,9 @@ object SingBoxConfig {
             if (s.host.isNotEmpty()) transport.put("headers", JSONObject().put("Host", s.host))
             outbound.put("transport", transport)
         }
+
+        }
+        outbound.put("domain_resolver", "bootstrap").put("tag", "proxy")
 
         // TUN FD is requested by libbox through PlatformInterface.openTun().
         // The Android VPN is not established manually or represented by a mock socket.
