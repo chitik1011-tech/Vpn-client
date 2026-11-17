@@ -199,5 +199,5 @@ class AndroidPlatform(
     override fun tailscaleHostname(): String = Build.MODEL
     override fun usePlatformBridge() = false
     override fun createBridge(options: BridgeOptions?): BridgeSession = error("Bridge requires root")
-    override fun usePlatformAutoRedirect() = false
+    override fun useProcFS() = false
 }
