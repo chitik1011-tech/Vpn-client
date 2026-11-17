@@ -29,6 +29,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.QrCodeScanner
+import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.AutoAwesome
 import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.barcode.BarcodeScannerOptions
@@ -176,6 +177,9 @@ class MainActivity : ComponentActivity() {
                         } else if (currentTab == 1) {
                             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                                 Text("Servers", style = MaterialTheme.typography.headlineMedium, modifier = Modifier.weight(1f))
+                                IconButton(onClick = { refreshSubscriptions() }) {
+                                    Icon(Icons.Rounded.Refresh, "Refresh subscriptions")
+                                }
                                 IconButton(onClick = { qrPhotoPicker.launch("image/*") }) {
                                     Icon(Icons.Rounded.QrCodeScanner, "Import QR code from photo")
                                 }
@@ -301,6 +305,23 @@ class MainActivity : ComponentActivity() {
                     }
                     else -> "Import failed. Check the URL, format or network connection."
                 }
+            }
+        }
+    }
+
+    private fun refreshSubscriptions() {
+        lifecycleScope.launch {
+            val sources = repository.profiles.value.map { it.subscription }
+                .filter { it.startsWith("https://", ignoreCase = true) }.distinct()
+            if (sources.isEmpty()) {
+                error.value = "No saved subscription URLs to refresh"
+                return@launch
+            }
+            try {
+                sources.forEach { repository.refresh(it) }
+                error.value = ""
+            } catch (_: Exception) {
+                error.value = "Refresh failed. Check subscription status or connection."
             }
         }
     }
