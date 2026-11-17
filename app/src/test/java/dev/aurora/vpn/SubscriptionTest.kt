@@ -127,8 +127,8 @@ class SubscriptionTest {
         SingBoxJsonImport.parse("""{"outbounds":[{"type":"vless","server":"bad"}]}""")
     }
 
-    @Test(expected = IllegalArgumentException::class)
-    fun unsupportedProtocolRejected() {
+    @Test(expected = org.json.JSONException::class)
+    fun missingTrojanRequiredFieldsRejected() {
         SingBoxJsonImport.parse("""{"outbounds":[{"type":"trojan","server":"host"}]}""")
     }
 }
